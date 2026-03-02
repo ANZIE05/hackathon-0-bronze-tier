@@ -1,0 +1,58 @@
+# Environment variables - NEVER COMMIT TO GIT
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Tokens
+token.json
+credentials.json
+
+# Temporary files
+*.tmp
+.temp/
+
+# Qwen CLI
+.qwen/
+
+# Local data
+vault/
