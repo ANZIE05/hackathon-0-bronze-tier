@@ -53,6 +53,3 @@ credentials.json
 
 # Qwen CLI
 .qwen/
-
-# Local data
-vault/
