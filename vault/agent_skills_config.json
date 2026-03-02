@@ -1,0 +1,78 @@
+{
+  "name": "personal-ai-employee",
+  "version": "0.1.0",
+  "description": "Agent skills for the Personal AI Employee system",
+  "skills": [
+    {
+      "name": "process_needs_action_items",
+      "description": "Process all items in the Needs_Action folder",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "max_items": {
+            "type": "integer",
+            "description": "Maximum number of items to process",
+            "default": 5
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "create_action_from_email",
+      "description": "Create an action item from an email message",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sender": {
+            "type": "string",
+            "description": "Email sender address"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject"
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body content"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "Priority level for the action",
+            "default": "medium"
+          }
+        },
+        "required": ["sender", "subject", "body"]
+      }
+    },
+    {
+      "name": "update_dashboard",
+      "description": "Update the AI Employee dashboard with current status",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "check_company_handbook",
+      "description": "Check the Company Handbook for rules related to a situation",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Topic to look up in the handbook (e.g., 'payment approval', 'communication guidelines')"
+          }
+        },
+        "required": ["topic"]
+      }
+    },
+    {
+      "name": "browse_with_playwright",
+      "description": "Browse a website and extract content",
+      "function": "browse_with_playwright"
+    }
+  ]
+}
