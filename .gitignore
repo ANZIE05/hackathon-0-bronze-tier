@@ -18,7 +18,7 @@ lib/
 lib64/
 parts/
 sdist/
-var/
+var/X
 wheels/
 *.egg-info/
 .installed.cfg
@@ -53,3 +53,14 @@ credentials.json
 
 # Qwen CLI
 .qwen/
+
+# OAuth secrets
+credentials.json
+token.json
+
+# Python
+venv/
+__pycache__/
+
+# logs
+*.log
