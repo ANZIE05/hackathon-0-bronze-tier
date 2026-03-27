@@ -1,11 +1,23 @@
 """
-Orchestrator for Personal AI Employee
+Orchestrator for Personal AI Employee - Silver Tier
 
 This script coordinates the various components of the AI Employee system:
 - Starts and monitors watcher services
-- Processes files in the vault
+- Processes files in the vault using Decision Engine
 - Updates the dashboard
-- Manages the AI reasoning loop
+- Manages the AI reasoning loop with Plan generation
+- Executes skill chains for complex workflows
+- Handles human-in-the-loop approvals
+- Runs scheduled tasks
+
+Silver Tier Enhancements:
+- Decision Engine for intelligent task selection
+- Priority Matrix for task scoring
+- Memory Store for context-aware actions
+- Plan Generator for AI reasoning
+- Skill Chain Executor for workflows
+- Approval Workflow for HITL
+- Task Scheduler for timed operations
 """
 
 import time
@@ -18,6 +30,23 @@ import threading
 import subprocess
 import signal
 import json
+
+# Import Silver Tier modules
+try:
+    from silver.memory_store import MemoryStore
+    from silver.decision_engine import DecisionEngine
+    from silver.priority_matrix import PriorityMatrix, PriorityLevel
+    from silver.skill_chain_executor import SkillChainExecutor
+    from silver.plan_generator import PlanGenerator
+    from silver.approval_workflow import ApprovalWorkflow
+    from silver.scheduler import TaskScheduler
+    SILVER_TIER_AVAILABLE = True
+except ImportError as e:
+    SILVER_TIER_AVAILABLE = False
+    print(f"Warning: Silver Tier modules not available: {e}")
+    print("Running in Bronze Tier compatibility mode")
+
+# Import Bronze Tier modules
 from browsing import browse_with_playwright
 
 # Set up logging
@@ -189,12 +218,166 @@ SKILL_FUNCTIONS = {
     "browse_with_playwright": browse_with_playwright,
 }
 
+
+# ==================== SILVER TIER SKILL FUNCTIONS ====================
+
+def skill_generate_plan(task_file: str, include_context: bool = True) -> dict:
+    """Generate a Plan.md file for a task using AI reasoning"""
+    logger.info(f"Skill: generate_plan (task_file={task_file})")
+    if not SILVER_TIER_AVAILABLE:
+        return {"status": "error", "message": "Silver Tier modules not available"}
+    
+    try:
+        vault_path = Path(".")
+        generator = PlanGenerator(vault_path)
+        plan_path = generator.create_plan(Path(task_file))
+        return {
+            "status": "success",
+            "skill": "generate_plan",
+            "plan_file": str(plan_path)
+        }
+    except Exception as e:
+        logger.error(f"Error generating plan: {e}")
+        return {"status": "error", "skill": "generate_plan", "message": str(e)}
+
+
+def skill_execute_skill_chain(chain_name: str, initial_context: dict = None) -> dict:
+    """Execute a predefined skill chain"""
+    logger.info(f"Skill: execute_skill_chain (chain={chain_name})")
+    if not SILVER_TIER_AVAILABLE:
+        return {"status": "error", "message": "Silver Tier modules not available"}
+    
+    try:
+        vault_path = Path(".")
+        orchestrator = Orchestrator(vault_path)
+        executor = SkillChainExecutor(orchestrator, vault_path / "silver" / "chains")
+        chain = executor.load_chain(chain_name)
+        if chain:
+            results = executor.execute_chain(chain, initial_context or {})
+            return {
+                "status": "success",
+                "skill": "execute_skill_chain",
+                "chain": chain_name,
+                "results": results
+            }
+        return {"status": "error", "message": f"Chain not found: {chain_name}"}
+    except Exception as e:
+        logger.error(f"Error executing skill chain: {e}")
+        return {"status": "error", "skill": "execute_skill_chain", "message": str(e)}
+
+
+def skill_create_approval_request(action_type: str, action_details: dict, priority: str = "medium") -> dict:
+    """Create an approval request file for human review"""
+    logger.info(f"Skill: create_approval_request (action={action_type})")
+    if not SILVER_TIER_AVAILABLE:
+        return {"status": "error", "message": "Silver Tier modules not available"}
+    
+    try:
+        vault_path = Path(".")
+        workflow = ApprovalWorkflow(vault_path)
+        request_path = workflow.create_approval_request(action_type, action_details, priority)
+        return {
+            "status": "success",
+            "skill": "create_approval_request",
+            "request_file": str(request_path)
+        }
+    except Exception as e:
+        logger.error(f"Error creating approval request: {e}")
+        return {"status": "error", "skill": "create_approval_request", "message": str(e)}
+
+
+def skill_retrieve_memory_context(task_type: str, sender: str = None, limit: int = 5) -> dict:
+    """Retrieve relevant memories for context-aware actions"""
+    logger.info(f"Skill: retrieve_memory_context (type={task_type})")
+    if not SILVER_TIER_AVAILABLE:
+        return {"status": "error", "message": "Silver Tier modules not available"}
+    
+    try:
+        vault_path = Path(".")
+        memory = MemoryStore(vault_path)
+        context = memory.get_context_for_task(task_type, sender)
+        return {
+            "status": "success",
+            "skill": "retrieve_memory_context",
+            "context": context
+        }
+    except Exception as e:
+        logger.error(f"Error retrieving memory context: {e}")
+        return {"status": "error", "skill": "retrieve_memory_context", "message": str(e)}
+
+
+def skill_send_email_via_mcp(to: str, subject: str, body: str, attachments: list = None) -> dict:
+    """Send email using MCP server"""
+    logger.info(f"Skill: send_email_via_mcp (to={to})")
+    try:
+        from silver.mcp_servers.email_mcp_server import EmailMCPServer
+        vault_path = Path(".")
+        server = EmailMCPServer(vault_path)
+        result = server.send_email(to, subject, body, attachments=attachments)
+        return {
+            "status": "success" if result.get('success') else "error",
+            "skill": "send_email_via_mcp",
+            "result": result
+        }
+    except ImportError:
+        return {"status": "error", "message": "Email MCP server not available"}
+    except Exception as e:
+        logger.error(f"Error sending email via MCP: {e}")
+        return {"status": "error", "skill": "send_email_via_mcp", "message": str(e)}
+
+
+def skill_post_linkedin_via_mcp(content: str, schedule_time: str = None) -> dict:
+    """Post to LinkedIn using MCP server"""
+    logger.info(f"Skill: post_linkedin_via_mcp")
+    try:
+        from silver.mcp_servers.linkedin_mcp_server import LinkedInMCPServer
+        vault_path = Path(".")
+        server = LinkedInMCPServer(vault_path)
+        result = server.create_linkedin_post(content, schedule_time, publish=False)
+        return {
+            "status": "success" if result.get('success') else "error",
+            "skill": "post_linkedin_via_mcp",
+            "result": result
+        }
+    except ImportError:
+        return {"status": "error", "message": "LinkedIn MCP server not available"}
+    except Exception as e:
+        logger.error(f"Error posting to LinkedIn via MCP: {e}")
+        return {"status": "error", "skill": "post_linkedin_via_mcp", "message": str(e)}
+
+
+# Add Silver Tier skills to mapping
+if SILVER_TIER_AVAILABLE:
+    SKILL_FUNCTIONS.update({
+        "generate_plan": skill_generate_plan,
+        "execute_skill_chain": skill_execute_skill_chain,
+        "create_approval_request": skill_create_approval_request,
+        "retrieve_memory_context": skill_retrieve_memory_context,
+        "send_email_via_mcp": skill_send_email_via_mcp,
+        "post_linkedin_via_mcp": skill_post_linkedin_via_mcp,
+    })
+
 class Orchestrator:
     """
     Main orchestrator for the AI Employee system
+    
+    Silver Tier Enhancements:
+    - Decision Engine for intelligent task selection
+    - Memory Store for context-aware actions
+    - Plan Generator for AI reasoning
+    - Skill Chain Executor for workflows
+    - Approval Workflow for HITL
+    - Task Scheduler for timed operations
     """
 
-    def __init__(self, vault_path: str = "."):
+    def __init__(self, vault_path: str = ".", enable_silver_tier: bool = True):
+        """
+        Initialize the orchestrator.
+        
+        Args:
+            vault_path: Path to the Obsidian vault
+            enable_silver_tier: If True and available, enable Silver Tier features
+        """
         self.vault_path = Path(vault_path)
         self.needs_action_path = self.vault_path / "Needs_Action"
         self.done_path = self.vault_path / "Done"
@@ -212,8 +395,34 @@ class Orchestrator:
 
         # Load skills configuration
         self.skills_config = self._load_skills_config()
+        
+        # Silver Tier components (initialized if available)
+        self.silver_enabled = enable_silver_tier and SILVER_TIER_AVAILABLE
+        
+        if self.silver_enabled:
+            try:
+                self.memory_store = MemoryStore(self.vault_path)
+                self.decision_engine = DecisionEngine(self.vault_path)
+                self.plan_generator = PlanGenerator(self.vault_path)
+                self.skill_chain_executor = SkillChainExecutor(
+                    self, 
+                    self.vault_path / "silver" / "chains"
+                )
+                self.approval_workflow = ApprovalWorkflow(self.vault_path)
+                self.scheduler = TaskScheduler(self.vault_path, self)
+                logger.info("Silver Tier components initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Silver Tier components: {e}")
+                self.silver_enabled = False
+        else:
+            self.memory_store = None
+            self.decision_engine = None
+            self.plan_generator = None
+            self.skill_chain_executor = None
+            self.approval_workflow = None
+            self.scheduler = None
 
-        logger.info("Orchestrator initialized")
+        logger.info(f"Orchestrator initialized (Silver Tier: {'enabled' if self.silver_enabled else 'disabled'})")
 
     def _load_skills_config(self) -> dict:
         """
@@ -522,6 +731,129 @@ class Orchestrator:
 
         except Exception as e:
             logger.error(f"Error simulating processing for {file_path.name}: {str(e)}")
+    
+    def _parse_frontmatter(self, content: str) -> dict:
+        """Parse YAML frontmatter from markdown content"""
+        import re
+        frontmatter = {}
+        
+        match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
+        
+        if match:
+            yaml_content = match.group(1)
+            
+            for line in yaml_content.split('\n'):
+                if ':' in line:
+                    key, value = line.split(':', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    
+                    # Remove quotes
+                    if (value.startswith('"') and value.endswith('"')) or \
+                       (value.startswith("'") and value.endswith("'")):
+                        value = value[1:-1]
+                    
+                    # Type conversion
+                    if value.lower() == 'true':
+                        value = True
+                    elif value.lower() == 'false':
+                        value = False
+                    else:
+                        try:
+                            value = float(value)
+                            if value == int(value):
+                                value = int(value)
+                        except ValueError:
+                            pass
+                    
+                    frontmatter[key] = value
+        
+        return frontmatter
+    
+    def process_approved_actions(self):
+        """
+        Process files in Approved/ folder using MCP servers.
+        Silver Tier feature for Human-in-the-Loop workflow.
+        """
+        if not self.approval_workflow:
+            return
+        
+        approved_files = list(self.approved_path.glob("*.md"))
+        
+        for approved_file in approved_files:
+            try:
+                content = approved_file.read_text(encoding='utf-8')
+                frontmatter = self._parse_frontmatter(content)
+                
+                action_type = frontmatter.get('action', frontmatter.get('type'))
+                
+                logger.info(f"Processing approved action: {action_type}")
+                
+                # Route to appropriate MCP server or handler
+                if action_type == 'send_email':
+                    self._execute_email_action(frontmatter)
+                elif action_type == 'post_social' or action_type == 'linkedin':
+                    self._execute_linkedin_action(frontmatter)
+                elif action_type == 'payment':
+                    self._execute_payment_action(frontmatter)
+                else:
+                    logger.info(f"Unknown action type: {action_type}, moving to Done")
+                
+                # Move to Done after processing
+                done_file = self.done_path / f"DONE_{approved_file.name}"
+                approved_file.rename(done_file)
+                logger.info(f"Approved action completed: {approved_file.name}")
+                
+            except Exception as e:
+                logger.error(f"Error processing approved action: {e}")
+    
+    def _execute_email_action(self, frontmatter: dict):
+        """Execute email sending action"""
+        if not SILVER_TIER_AVAILABLE:
+            logger.warning("Email MCP not available")
+            return
+        
+        from silver.mcp_servers.email_mcp_server import EmailMCPServer
+        
+        server = EmailMCPServer(self.vault_path)
+        result = server.send_email(
+            to=frontmatter.get('to', ''),
+            subject=frontmatter.get('subject', ''),
+            body=frontmatter.get('body', '')
+        )
+        
+        if result.get('success'):
+            logger.info("Email sent successfully")
+        else:
+            logger.warning(f"Email send failed: {result.get('error', 'Unknown error')}")
+    
+    def _execute_linkedin_action(self, frontmatter: dict):
+        """Execute LinkedIn posting action"""
+        if not SILVER_TIER_AVAILABLE:
+            logger.warning("LinkedIn MCP not available")
+            return
+        
+        from silver.mcp_servers.linkedin_mcp_server import LinkedInMCPServer
+        
+        server = LinkedInMCPServer(self.vault_path)
+        result = server.create_linkedin_post(
+            content=frontmatter.get('content', ''),
+            schedule_time=frontmatter.get('schedule_time'),
+            publish=frontmatter.get('publish', False)
+        )
+        
+        if result.get('success'):
+            logger.info("LinkedIn post created successfully")
+        else:
+            logger.warning(f"LinkedIn post failed: {result.get('error', 'Unknown error')}")
+    
+    def _execute_payment_action(self, frontmatter: dict):
+        """Execute payment action (placeholder for integration)"""
+        amount = frontmatter.get('amount', 0)
+        recipient = frontmatter.get('recipient', '')
+        
+        logger.info(f"Payment approved: ${amount} to {recipient}")
+        # In production, integrate with payment gateway MCP server
 
     def run_health_check(self):
         """
@@ -545,33 +877,43 @@ class Orchestrator:
         except Exception as e:
             logger.error(f"Error during health check: {str(e)}")
 
-    def run(self, check_interval: int = 30, auto_execute_skills: bool = False):
+    def run(self, check_interval: int = 30, auto_execute_skills: bool = False, use_decision_engine: bool = True):
         """
-        Main orchestration loop.
-        
+        Main orchestration loop with Silver Tier enhancements.
+
         Args:
             check_interval: Seconds between orchestration cycles
-            auto_execute_skills: If True, automatically executes skills from config.
-                                Default is False to maintain Bronze Tier stability.
+            auto_execute_skills: If True, automatically executes skills from config
+            use_decision_engine: If True and Silver Tier enabled, use Decision Engine for task selection
         """
-        logger.info("Starting Orchestrator...")
+        logger.info(f"Starting Orchestrator (Silver Tier: {self.silver_enabled})...")
 
-        # Start the filesystem watcher as an example
+        # Start the filesystem watcher
         fs_watcher_path = self.vault_path / "filesystem_watcher.py"
         if fs_watcher_path.exists():
             self.start_watcher(str(fs_watcher_path), "filesystem_watcher")
+        
+        # Start scheduler if Silver Tier enabled
+        if self.silver_enabled and self.scheduler:
+            self.scheduler.start()
+            logger.info("Task scheduler started")
 
         try:
             while True:
                 # Perform health check
                 self.run_health_check()
 
-                # Process any pending action items
-                self.process_needs_action()
+                # Process pending action items using Decision Engine if available
+                if self.silver_enabled and use_decision_engine and self.decision_engine:
+                    self._process_with_decision_engine()
+                else:
+                    self.process_needs_action()
+
+                # Process approved actions (HITL)
+                if self.silver_enabled and self.approval_workflow:
+                    self.process_approved_actions()
 
                 # CONTROLLED SKILL EXECUTION TRIGGER
-                # Optional: Auto-execute skills if enabled (default: disabled for stability)
-                # Skills can always be executed manually via execute_skill() method
                 if auto_execute_skills:
                     self._execute_configured_skills()
 
@@ -587,7 +929,71 @@ class Orchestrator:
             logger.error(f"Unexpected error in orchestrator: {str(e)}")
         finally:
             logger.info("Shutting down orchestrator...")
+            if self.silver_enabled and self.scheduler:
+                self.scheduler.stop()
             self.stop_all_watchers()
+    
+    def _process_with_decision_engine(self):
+        """
+        Process tasks using Silver Tier Decision Engine.
+        Selects highest priority task, generates plan, and executes appropriate chain.
+        """
+        if not self.decision_engine:
+            self.process_needs_action()
+            return
+        
+        # Select next task using Decision Engine
+        next_task = self.decision_engine.select_next_task()
+        
+        if next_task:
+            logger.info(f"Decision Engine selected: {next_task.name}")
+            
+            # Set as current task in memory
+            if self.memory_store:
+                self.memory_store.set_current_task(next_task.stem, {'path': str(next_task)})
+            
+            # Check if approval is required
+            if self.approval_workflow:
+                requires_approval, reason = self.approval_workflow.requires_approval(next_task)
+                if requires_approval:
+                    logger.info(f"Task requires approval: {reason}")
+                    # Create approval request
+                    frontmatter = self._parse_frontmatter(next_task.read_text())
+                    self.approval_workflow.create_approval_request(
+                        action_type=frontmatter.get('type', 'unknown'),
+                        action_details=frontmatter,
+                        priority=frontmatter.get('priority', 'medium')
+                    )
+                    return
+            
+            # Generate plan for the task
+            if self.plan_generator:
+                try:
+                    plan_path = self.plan_generator.create_plan(next_task)
+                    logger.info(f"Generated plan: {plan_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to generate plan: {e}")
+            
+            # Select and execute appropriate skill chain
+            if self.skill_chain_executor:
+                chain_name = self.decision_engine.select_chain_for_task(next_task)
+                if chain_name:
+                    logger.info(f"Executing chain: {chain_name}")
+                    try:
+                        chain = self.skill_chain_executor.load_chain(chain_name)
+                        if chain:
+                            # Pass task file to chain context
+                            context = {'_task_file': str(next_task)}
+                            self.skill_chain_executor.execute_chain(chain, context, next_task.stem)
+                            logger.info(f"Chain {chain_name} completed")
+                            return
+                    except Exception as e:
+                        logger.error(f"Chain execution failed: {e}")
+            
+            # Fallback to simple processing
+            self.simulate_processing(next_task)
+        else:
+            logger.debug("No tasks selected by Decision Engine")
     
     def _execute_configured_skills(self):
         """

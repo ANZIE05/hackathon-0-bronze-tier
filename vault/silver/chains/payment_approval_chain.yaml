@@ -1,0 +1,83 @@
+# Payment Approval Chain
+# Processes payment requests: validate, check threshold, create approval, execute if approved
+
+name: "payment_approval_chain"
+description: "Process payment requests - validate request details, check approval thresholds, create approval request, execute if approved"
+version: "1.0"
+
+steps:
+  # Step 1: Extract payment details
+  - skill: "extract_payment_details"
+    input:
+      request_content: "${_request_content}"
+    output: "payment_details"
+    required: true
+
+  # Step 2: Validate payment information
+  - skill: "validate_payment"
+    input:
+      amount: "${payment_details.amount}"
+      recipient: "${payment_details.recipient}"
+      reason: "${payment_details.reason}"
+    output: "validation_result"
+    required: true
+
+  # Step 3: Check if recipient is known vendor
+  - skill: "lookup_vendor"
+    input:
+      vendor_name: "${payment_details.recipient}"
+    output: "vendor_info"
+    required: false
+
+  # Step 4: Check approval threshold
+  - skill: "check_payment_threshold"
+    input:
+      amount: "${payment_details.amount}"
+      is_recurring: "${payment_details.is_recurring}"
+      vendor_known: "${vendor_info.is_known}"
+    output: "threshold_check"
+    required: true
+
+  # Step 5: Check for duplicate payment
+  - skill: "check_duplicate_payment"
+    input:
+      recipient: "${payment_details.recipient}"
+      amount: "${payment_details.amount}"
+      reason: "${payment_details.reason}"
+    output: "duplicate_check"
+    required: false
+
+  # Step 6: Create approval request if needed
+  - skill: "create_approval_request"
+    input:
+      action_type: "payment"
+      amount: "${payment_details.amount}"
+      recipient: "${payment_details.recipient}"
+      reason: "${payment_details.reason}"
+      threshold_info: "${threshold_check}"
+    output: "approval_file"
+    required: "${threshold_check.requires_approval}"
+
+  # Step 7: Auto-execute if under threshold
+  - skill: "execute_payment"
+    input:
+      amount: "${payment_details.amount}"
+      recipient: "${payment_details.recipient}"
+      reason: "${payment_details.reason}"
+    output: "payment_result"
+    required: "${not threshold_check.requires_approval}"
+
+  # Step 8: Log the payment action
+  - skill: "log_payment"
+    input:
+      amount: "${payment_details.amount}"
+      recipient: "${payment_details.recipient}"
+      status: "${threshold_check.requires_approval ? 'pending_approval' : 'executed'}"
+    output: "log_entry"
+    required: false
+
+error_handling:
+  on_failure: "rollback"
+  max_retries: 1
+  notify_on_error: true
+  fallback_action: "create_manual_payment_review"

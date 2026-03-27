@@ -54,31 +54,19 @@ class GmailWatcher(BaseWatcher):
         if not self.credentials_path:
             logger.warning("GMAIL_CREDENTIALS_PATH not set, using simulation mode")
             return None
-        
+
         try:
-            from google.oauth2.credentials import Credentials
-            from google.oauth2 import service_account
-            from googleapiclient.discovery import build
-            from google.auth.transport.requests import Request
-            import pickle
+            from gmail_auth import authenticate_gmail
             
-            creds = None
-            if os.path.exists(self.token_path):
-                with open(self.token_path, 'rb') as token:
-                    creds = pickle.load(token)
+            self.service = authenticate_gmail(
+                credentials_path=self.credentials_path,
+                token_path=self.token_path
+            )
             
-            if not creds or not creds.valid:
-                if creds and creds.expired and creds.refresh_token:
-                    creds.refresh(Request())
-                else:
-                    # Flow setup would go here for first-time auth
-                    logger.warning("No valid token found, run OAuth2 flow first")
-                    return None
-            
-            self.service = build('gmail', 'v1', credentials=creds)
-            logger.info("Connected to Gmail API")
+            if self.service:
+                logger.info("Connected to Gmail API")
             return self.service
-            
+
         except Exception as e:
             logger.error(f"Failed to connect to Gmail API: {str(e)}")
             return None
@@ -209,15 +197,31 @@ Date: {email_data['timestamp']}
 
 def main():
     """Main function to run the Gmail Watcher"""
+    # Check if credentials path is set
+    credentials_path = os.environ.get('GMAIL_CREDENTIALS_PATH')
+    
+    if not credentials_path:
+        # Default to credentials.json in vault directory
+        credentials_path = str(Path("vault/credentials.json").resolve())
+        if not Path(credentials_path).exists():
+            credentials_path = None
+    
     # Initialize the watcher
     watcher = GmailWatcher(
         vault_path=".",
-        check_interval=30  # Check every 30 seconds for demo purposes
+        check_interval=30
     )
-
+    watcher.credentials_path = credentials_path
+    
     # Run once for initial setup, or continuously
     print("Gmail Watcher started. Press Ctrl+C to stop.")
-    print("Note: Running in simulation mode. Set GMAIL_CREDENTIALS_PATH for real Gmail API.")
+    if credentials_path:
+        print(f"Using credentials: {credentials_path}")
+        print("First run will open browser for OAuth authentication.")
+    else:
+        print("Running in simulation mode.")
+        print("Set GMAIL_CREDENTIALS_PATH or place credentials.json in vault/ for real Gmail API.")
+    
     watcher.run()
 
 

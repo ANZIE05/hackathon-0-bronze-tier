@@ -1,7 +1,8 @@
 {
   "name": "personal-ai-employee",
-  "version": "0.1.0",
-  "description": "Agent skills for the Personal AI Employee system",
+  "version": "0.2.0-silver",
+  "description": "Agent skills for Personal AI Employee - Silver Tier with reasoning, planning, and MCP capabilities",
+  "tier": "silver",
   "skills": [
     {
       "name": "process_needs_action_items",
@@ -73,6 +74,208 @@
       "name": "browse_with_playwright",
       "description": "Browse a website and extract content",
       "function": "browse_with_playwright"
+    },
+    {
+      "name": "generate_plan",
+      "description": "Generate a Plan.md file for a task using AI reasoning with context from memory",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task_file": {
+            "type": "string",
+            "description": "Path to the task file"
+          },
+          "include_context": {
+            "type": "boolean",
+            "description": "Include memory context in plan generation",
+            "default": true
+          }
+        },
+        "required": ["task_file"]
+      }
+    },
+    {
+      "name": "execute_skill_chain",
+      "description": "Execute a predefined skill chain for complex workflows",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "chain_name": {
+            "type": "string",
+            "description": "Name of the chain to execute (e.g., 'email_triage_chain', 'invoice_request_chain')"
+          },
+          "initial_context": {
+            "type": "object",
+            "description": "Initial context variables for the chain"
+          }
+        },
+        "required": ["chain_name"]
+      }
+    },
+    {
+      "name": "create_approval_request",
+      "description": "Create an approval request file for human review (HITL workflow)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "action_type": {
+            "type": "string",
+            "description": "Type of action requiring approval (payment, email, social_post, etc.)"
+          },
+          "action_details": {
+            "type": "object",
+            "description": "Details of the action"
+          },
+          "priority": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "critical"],
+            "description": "Priority level"
+          }
+        },
+        "required": ["action_type", "action_details"]
+      }
+    },
+    {
+      "name": "retrieve_memory_context",
+      "description": "Retrieve relevant memories for context-aware actions (episodic and semantic memory)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task_type": {
+            "type": "string",
+            "description": "Type of task (email, payment, invoice, etc.)"
+          },
+          "sender": {
+            "type": "string",
+            "description": "Sender identifier for history lookup"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Maximum number of results to return",
+            "default": 5
+          }
+        },
+        "required": ["task_type"]
+      }
+    },
+    {
+      "name": "send_email_via_mcp",
+      "description": "Send email using MCP server (requires email credentials configuration)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "Recipient email address"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Email subject"
+          },
+          "body": {
+            "type": "string",
+            "description": "Email body content"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Paths to attachment files"
+          }
+        },
+        "required": ["to", "subject", "body"]
+      }
+    },
+    {
+      "name": "post_linkedin_via_mcp",
+      "description": "Create and post to LinkedIn using MCP server (draft by default, requires API for publishing)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Post content (max 3000 characters)"
+          },
+          "schedule_time": {
+            "type": "string",
+            "description": "ISO format datetime for scheduled posting"
+          }
+        },
+        "required": ["content"]
+      }
+    },
+    {
+      "name": "calculate_priority_score",
+      "description": "Calculate priority score for a task using Priority Matrix",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "task_file": {
+            "type": "string",
+            "description": "Path to the task file"
+          }
+        },
+        "required": ["task_file"]
+      }
+    },
+    {
+      "name": "get_decision_statistics",
+      "description": "Get statistics about pending tasks and decision engine state",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
     }
-  ]
+  ],
+  "chains": [
+    {
+      "name": "email_triage_chain",
+      "file": "silver/chains/email_triage_chain.yaml",
+      "description": "Process incoming emails - read, classify, check handbook, create action"
+    },
+    {
+      "name": "invoice_request_chain",
+      "file": "silver/chains/invoice_request_chain.yaml",
+      "description": "Handle invoice requests - detect, lookup client, generate invoice, send for approval"
+    },
+    {
+      "name": "social_post_chain",
+      "file": "silver/chains/social_post_chain.yaml",
+      "description": "Create and schedule social media posts"
+    },
+    {
+      "name": "payment_approval_chain",
+      "file": "silver/chains/payment_approval_chain.yaml",
+      "description": "Process payment requests with approval workflow"
+    },
+    {
+      "name": "file_processing_chain",
+      "file": "silver/chains/file_processing_chain.yaml",
+      "description": "Process files dropped in Inbox"
+    }
+  ],
+  "mcp_servers": [
+    {
+      "name": "email_mcp_server",
+      "description": "Email send/receive capabilities",
+      "file": "silver/mcp_servers/email_mcp_server.py"
+    },
+    {
+      "name": "linkedin_mcp_server",
+      "description": "LinkedIn posting capabilities",
+      "file": "silver/mcp_servers/linkedin_mcp_server.py"
+    }
+  ],
+  "silver_tier_features": {
+    "decision_engine": true,
+    "memory_store": true,
+    "priority_matrix": true,
+    "skill_chains": true,
+    "plan_generator": true,
+    "approval_workflow": true,
+    "scheduler": true,
+    "mcp_servers": true
+  }
 }

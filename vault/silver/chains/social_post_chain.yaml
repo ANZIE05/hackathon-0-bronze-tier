@@ -1,0 +1,83 @@
+# Social Post Chain
+# Creates and schedules social media posts: generate content, check guidelines, schedule, log
+
+name: "social_post_chain"
+description: "Create and schedule social media posts - generate content, check guidelines, schedule post, log activity"
+version: "1.0"
+
+steps:
+  # Step 1: Determine post topic and platform
+  - skill: "get_post_requirements"
+    input:
+      topic: "${_topic}"
+      platform: "${_platform}"
+    output: "requirements"
+    required: true
+
+  # Step 2: Generate post content
+  - skill: "generate_post_content"
+    input:
+      topic: "${requirements.topic}"
+      platform: "${requirements.platform}"
+      tone: "${requirements.tone}"
+      max_length: "${requirements.max_length}"
+    output: "post_content"
+    required: true
+
+  # Step 3: Check content against guidelines
+  - skill: "check_content_guidelines"
+    input:
+      content: "${post_content}"
+      platform: "${requirements.platform}"
+    output: "guidelines_check"
+    required: true
+
+  # Step 4: Add hashtags if appropriate
+  - skill: "generate_hashtags"
+    input:
+      topic: "${requirements.topic}"
+      platform: "${requirements.platform}"
+    output: "hashtags"
+    required: false
+
+  # Step 5: Combine content and hashtags
+  - skill: "finalize_post"
+    input:
+      content: "${post_content}"
+      hashtags: "${hashtags}"
+      guidelines: "${guidelines_check}"
+    output: "final_post"
+    required: true
+
+  # Step 6: Determine schedule time
+  - skill: "get_optimal_post_time"
+    input:
+      platform: "${requirements.platform}"
+      timezone: "${_timezone}"
+    output: "schedule_time"
+    required: false
+
+  # Step 7: Create approval request for post
+  - skill: "create_approval_request"
+    input:
+      action_type: "post_social"
+      platform: "${requirements.platform}"
+      content: "${final_post}"
+      schedule_time: "${schedule_time}"
+    output: "approval_file"
+    required: true
+
+  # Step 8: Log the scheduled post
+  - skill: "log_scheduled_post"
+    input:
+      platform: "${requirements.platform}"
+      topic: "${requirements.topic}"
+      scheduled_time: "${schedule_time}"
+    output: "log_entry"
+    required: false
+
+error_handling:
+  on_failure: "rollback"
+  max_retries: 2
+  notify_on_error: true
+  fallback_action: "save_draft_post"

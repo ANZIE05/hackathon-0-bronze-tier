@@ -1,0 +1,73 @@
+# Invoice Request Chain
+# Handles requests for invoices: detect request, lookup client, generate invoice, send for approval
+
+name: "invoice_request_chain"
+description: "Process invoice requests - detect request details, lookup client information, generate invoice, send for approval"
+version: "1.0"
+
+steps:
+  # Step 1: Extract invoice details from request
+  - skill: "extract_invoice_details"
+    input:
+      email_body: "${_email_body}"
+      subject: "${_subject}"
+    output: "invoice_details"
+    required: true
+
+  # Step 2: Lookup client information
+  - skill: "lookup_client"
+    input:
+      client_identifier: "${invoice_details.client}"
+    output: "client_info"
+    required: true
+
+  # Step 3: Calculate invoice amount
+  - skill: "calculate_invoice_amount"
+    input:
+      service_type: "${invoice_details.service}"
+      client_rate: "${client_info.rate}"
+      details: "${invoice_details}"
+    output: "amount"
+    required: true
+
+  # Step 4: Generate invoice document
+  - skill: "generate_invoice"
+    input:
+      client: "${client_info}"
+      amount: "${amount}"
+      details: "${invoice_details}"
+    output: "invoice_document"
+    required: true
+
+  # Step 5: Check approval requirements
+  - skill: "check_approval_required"
+    input:
+      amount: "${amount}"
+      client: "${client_info.name}"
+    output: "approval_status"
+    required: true
+
+  # Step 6: Create approval request or send invoice
+  - skill: "create_approval_request"
+    input:
+      action_type: "send_invoice"
+      invoice: "${invoice_document}"
+      amount: "${amount}"
+      recipient: "${client_info.email}"
+    output: "approval_file"
+    required: "${approval_status.requires_approval}"
+
+  # Step 7: Log the invoice request
+  - skill: "log_invoice_request"
+    input:
+      client: "${client_info.name}"
+      amount: "${amount}"
+      status: "${approval_status}"
+    output: "log_entry"
+    required: false
+
+error_handling:
+  on_failure: "rollback"
+  max_retries: 2
+  notify_on_error: true
+  fallback_action: "create_manual_invoice_task"

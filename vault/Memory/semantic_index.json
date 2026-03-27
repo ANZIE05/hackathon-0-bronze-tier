@@ -1,0 +1,20 @@
+{
+  "company_handbook_summary": "# Company Handbook\n\n## Rules of Engagement\n\n### Communication Guidelines\n- Always be polite and professional in all communications\n- Use formal language when corresponding with clients\n- Respond to urgent messages within 2 hours during business hours (9 AM - 6 PM)\n- Flag any message containing keywords like \"urgent\", \"emergency\", \"asap\", \"payment\", \"invoice\" for immediate attention\n\n### Approval Thresholds\n- All payments under $50: Auto-approve if recurring\n- All payments $50-$200: Require human approval\n- All payments over $200: Require human approval\n- New vendor payments: Always require approval\n- Subscription renewals: Auto-approve if previously approved\n\n### Client Interaction\n- Send invoices within 24 hours of project completion\n- Follow up on unpaid invoices after 7 days\n- Escalate any client complaints to human supervisor\n- Archive all completed client communications after 30 days\n\n### Email Management\n- Categorize incoming emails by priority (High/Medium/Low)\n- Respond to informational emails within 24 hours\n- Flag emails from unknown senders for review\n- Keep copies of all sent emails in records\n\n### File Management\n- Organize files by date and category\n- Maintain backup copies of important documents\n- Delete temporary files after 7 days\n- Log all file operations in the system logs\n\n### Error Handling\n- If uncertain about an action, create an approval request\n- Log all errors and unusual situations\n- Notify human supervisor of system malfunctions\n- Maintain graceful degradation during partial outages\n\n### Security Protocols\n- Never share credentials or sensitive information\n- Encrypt sensitive data stored locally\n- Verify all external connections before proceeding\n- Maintain audit logs of all actions taken\n\n## Standard Operating Procedures\n\n### Daily Routine\n1. Check for urgent messages\n2. Process pending approvals\n3. Update dashboard with current status\n4. Generate summary of activities\n\n### Weekly Routine\n1. Review all pending tasks\n2. Generate activity ",
+  "rules": {
+    "approval_thresholds": {
+      "auto_approve_under": 50,
+      "require_approval_over": 50,
+      "require_human_over": 200
+    },
+    "communication": {
+      "response_time_hours": 2,
+      "business_hours": "9 AM - 6 PM",
+      "tone": "polite and professional"
+    }
+  },
+  "rates": {},
+  "clients": {},
+  "subscriptions": {},
+  "last_updated": "2026-03-08T23:55:10.547357",
+  "test_key": "test_value"
+}

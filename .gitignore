@@ -64,3 +64,6 @@ __pycache__/
 
 # logs
 *.log
+
+# linkedin_session
+linkedin_session/

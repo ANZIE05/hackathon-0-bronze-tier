@@ -1,0 +1,70 @@
+# Email Triage Chain
+# Processes incoming emails: read, classify, check handbook, create action
+
+name: "email_triage_chain"
+description: "Process incoming emails - read content, classify priority, check handbook guidelines, create appropriate action"
+version: "1.0"
+
+steps:
+  # Step 1: Read and parse email content
+  - skill: "parse_email_frontmatter"
+    input:
+      task_file: "${_task_file}"
+    output: "email_data"
+    required: true
+
+  # Step 2: Check if sender is known
+  - skill: "lookup_sender_history"
+    input:
+      sender: "${email_data.from}"
+    output: "sender_history"
+    required: false
+
+  # Step 3: Check company handbook for relevant rules
+  - skill: "check_company_handbook"
+    input:
+      topic: "email response guidelines"
+    output: "guidelines"
+    required: false
+
+  # Step 4: Analyze email intent and urgency
+  - skill: "analyze_email_intent"
+    input:
+      subject: "${email_data.subject}"
+      body: "${email_data.body}"
+      keywords: "urgent, payment, invoice, asap, help"
+    output: "intent_analysis"
+    required: true
+
+  # Step 5: Calculate priority score
+  - skill: "calculate_priority"
+    input:
+      email_data: "${email_data}"
+      intent: "${intent_analysis}"
+      sender_known: "${sender_history.is_known}"
+    output: "priority_score"
+    required: true
+
+  # Step 6: Determine appropriate action
+  - skill: "determine_action"
+    input:
+      email_type: "${intent_analysis.type}"
+      priority: "${priority_score.level}"
+      guidelines: "${guidelines}"
+    output: "recommended_action"
+    required: true
+
+  # Step 7: Create or update action file
+  - skill: "create_action_item"
+    input:
+      email_data: "${email_data}"
+      action: "${recommended_action}"
+      priority: "${priority_score.level}"
+    output: "action_file"
+    required: true
+
+error_handling:
+  on_failure: "rollback"
+  max_retries: 2
+  notify_on_error: true
+  fallback_action: "create_manual_review_task"

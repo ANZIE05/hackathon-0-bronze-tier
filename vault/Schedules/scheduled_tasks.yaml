@@ -1,0 +1,45 @@
+daily_tasks:
+- name: morning_briefing
+  description: Generate morning briefing summary
+  time: 08:00
+  action: generate_briefing
+  enabled: true
+- name: evening_review
+  description: Review completed tasks and update dashboard
+  time: '18:00'
+  action: evening_review
+  enabled: true
+- name: check_pending_approvals
+  description: Check for expired approval requests
+  time: '12:00'
+  action: check_approvals
+  enabled: true
+- name: test_task
+  time: '23:59'
+  action: test_action
+  enabled: true
+  description: Test task
+weekly_tasks:
+- name: weekly_audit
+  description: Weekly business audit and CEO briefing
+  day: sunday
+  time: '20:00'
+  action: weekly_audit
+  enabled: true
+- name: subscription_review
+  description: Review recurring subscriptions
+  day: monday
+  time: 09:00
+  action: subscription_review
+  enabled: true
+interval_tasks:
+- name: health_check
+  description: System health check
+  interval_minutes: 60
+  action: health_check
+  enabled: true
+- name: dashboard_update
+  description: Update dashboard statistics
+  interval_minutes: 30
+  action: update_dashboard
+  enabled: true
